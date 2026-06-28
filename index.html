@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>火鶴花出貨填單系統</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <!-- Telegram WebApp SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <div class="header-content">
+                <div class="logo">
+                    <span class="logo-emoji">🌸</span>
+                    <h1>火鶴花出貨填單系統</h1>
+                </div>
+                <div class="theme-status">
+                    <span class="badge">平面簡約版 v1.0</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="app-main">
+            <!-- Left Column: Dynamic Form Elements -->
+            <section class="form-section">
+                <!-- Global Settings Card -->
+                <div class="card settings-card">
+                    <div class="card-header">
+                        <h2>出貨基本資訊</h2>
+                    </div>
+                    <div class="card-body grid-2">
+                        <div class="form-group">
+                            <label for="vendor-select">選擇廠商</label>
+                            <div class="select-wrapper">
+                                <select id="vendor-select">
+                                    <option value="商榮">商榮</option>
+                                    <option value="紅炬">紅炬</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="shipping-date">出貨日期</label>
+                            <input type="date" id="shipping-date">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bundles Control Area -->
+                <div class="bundles-header">
+                    <h2>出貨捆數明細</h2>
+                    <span class="helper-text">以「捆」為單位填寫，每一捆可填入多個不同尺寸與盒數</span>
+                </div>
+
+                <!-- Dynamic Bundle Cards Container -->
+                <div id="bundles-container" class="bundles-container">
+                    <!-- Managed by JavaScript -->
+                </div>
+
+                <!-- Add Bundle Button -->
+                <button id="add-bundle-btn" class="btn btn-primary btn-large btn-add-bundle">
+                    <span class="btn-icon">+</span> 新增一捆 (加捆)
+                </button>
+            </section>
+
+            <!-- Right Column: Live Statistics & Actions -->
+            <section class="summary-section">
+                <div class="sticky-panel">
+                    <div class="card summary-card">
+                        <div class="card-header">
+                            <h2>出貨統計摘要</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="stat-grid">
+                                <div class="stat-box">
+                                    <span class="stat-label">總捆數</span>
+                                    <span id="stat-total-bundles" class="stat-value">0</span>
+                                    <span class="stat-unit">捆</span>
+                                </div>
+                                <div class="stat-box">
+                                    <span class="stat-label">總盒數</span>
+                                    <span id="stat-total-boxes" class="stat-value">0</span>
+                                    <span class="stat-unit">盒</span>
+                                </div>
+                            </div>
+
+                            <div class="divider"></div>
+
+                            <h3>尺寸盒數分佈</h3>
+                            <ul class="size-distribution-list">
+                                <li class="dist-item">
+                                    <span class="size-badge size-s">S</span>
+                                    <span class="size-progress-bg">
+                                        <span id="bar-S" class="size-progress-bar" style="width: 0%"></span>
+                                    </span>
+                                    <span class="size-val"><span id="val-S">0</span> 盒</span>
+                                </li>
+                                <li class="dist-item">
+                                    <span class="size-badge size-m">M</span>
+                                    <span class="size-progress-bg">
+                                        <span id="bar-M" class="size-progress-bar" style="width: 0%"></span>
+                                    </span>
+                                    <span class="size-val"><span id="val-M">0</span> 盒</span>
+                                </li>
+                                <li class="dist-item">
+                                    <span class="size-badge size-l">L</span>
+                                    <span class="size-progress-bg">
+                                        <span id="bar-L" class="size-progress-bar" style="width: 0%"></span>
+                                    </span>
+                                    <span class="size-val"><span id="val-L">0</span> 盒</span>
+                                </li>
+                                <li class="dist-item">
+                                    <span class="size-badge size-2l">2L</span>
+                                    <span class="size-progress-bg">
+                                        <span id="bar-2L" class="size-progress-bar" style="width: 0%"></span>
+                                    </span>
+                                    <span class="size-val"><span id="val-2L">0</span> 盒</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="actions-card card">
+                        <div class="card-header">
+                            <h2>系統操作</h2>
+                        </div>
+                        <div class="card-body btn-group-vertical">
+                            <button id="submit-tg-btn" class="btn btn-telegram">
+                                📤 傳送至 Telegram
+                            </button>
+                            <button id="copy-summary-btn" class="btn btn-success">
+                                📋 複製出貨文字明細
+                            </button>
+                            <button id="export-csv-btn" class="btn btn-secondary">
+                                📥 匯出 CSV 檔案
+                            </button>
+                            <button id="reset-all-btn" class="btn btn-danger">
+                                ⚠️ 清除所有資料
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast hidden"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
