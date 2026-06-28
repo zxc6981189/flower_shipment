@@ -521,7 +521,7 @@ function sendToTelegram() {
     }
 
     const jsonString = JSON.stringify(orderData);
-
+    
     // Call switchInlineQuery if inside Telegram WebApp
     if (tgInstance && typeof tgInstance.switchInlineQuery === 'function') {
         try {
@@ -529,7 +529,7 @@ function sendToTelegram() {
             showToast('已傳送指令至 Telegram！');
         } catch (error) {
             console.error('Telegram switchInlineQuery failed:', error);
-            fallbackCopyToClipboard(jsonString, tgInstance);
+            fallbackCopyToClipboard(jsonString, tgInstance, error);
         }
     } else {
         // Fallback for regular web browsers
@@ -538,11 +538,24 @@ function sendToTelegram() {
 }
 
 // Fallback to copy JSON data to clipboard when not running in Telegram WebApp
-function fallbackCopyToClipboard(text, tgInstance) {
+function fallbackCopyToClipboard(text, tgInstance, error = null) {
     const isTelegram = tgInstance && tgInstance.platform !== 'unknown';
-    const msg = isTelegram 
+    let msg = isTelegram 
         ? '由於您的開啟管道限制（例如從主選單或 Inline 鍵盤開啟），無法直接傳送資料。\n系統已自動將「出貨單 JSON」複製至剪貼簿，您可以手動貼上發送給您的 Telegram Bot。'
         : '目前非處於 Telegram 應用程式環境。\n系統已自動將「出貨單 JSON」複製至剪貼簿，您可以手動貼上發送給您的 Telegram Bot。';
+
+    // 加上詳細的偵錯資訊
+    msg += '\n\n--- 偵錯資訊 (Debug Info) ---';
+    msg += `\n- window.Telegram: ${typeof window.Telegram !== 'undefined' ? '已載入' : '未載入'}`;
+    msg += `\n- WebApp 實例: ${tgInstance ? '已初始化' : '未初始化'}`;
+    if (tgInstance) {
+        msg += `\n- 平台 (Platform): ${tgInstance.platform || '未知'}`;
+        msg += `\n- initData 長度: ${tgInstance.initData ? tgInstance.initData.length : 0}`;
+        msg += `\n- switchInlineQuery: ${typeof tgInstance.switchInlineQuery === 'function' ? '存在' : '不存在'}`;
+    }
+    if (error) {
+        msg += `\n- 錯誤詳情: ${error.message || error}`;
+    }
 
     navigator.clipboard.writeText(text).then(() => {
         alert(msg);
