@@ -1,6 +1,3 @@
-// Telegram WebApp SDK Instance
-const tg = window.Telegram?.WebApp;
-
 // Application State
 let state = {
     vendor: '商榮',
@@ -10,10 +7,11 @@ let state = {
 
 // Initialize App
 document.addEventListener('DOMContentLoaded', () => {
+    const tgInstance = window.Telegram?.WebApp;
     // Tell Telegram WebApp we are ready
-    if (tg) {
-        tg.ready();
-        tg.expand?.(); // Expand WebApp to full height for better UI layout in Telegram
+    if (tgInstance) {
+        tgInstance.ready();
+        tgInstance.expand?.(); // Expand WebApp to full height for better UI layout in Telegram
     }
     initDefaultDate();
     loadStateFromStorage();
@@ -512,36 +510,42 @@ function sendToTelegram() {
     }
 
     // Include Telegram WebApp context if available
-    if (tg && tg.initDataUnsafe && Object.keys(tg.initDataUnsafe).length > 0) {
+    const tgInstance = window.Telegram?.WebApp;
+    if (tgInstance && tgInstance.initDataUnsafe && Object.keys(tgInstance.initDataUnsafe).length > 0) {
         orderData.telegram = {
-            user: tg.initDataUnsafe.user,
-            query_id: tg.initDataUnsafe.query_id,
-            auth_date: tg.initDataUnsafe.auth_date,
-            hash: tg.initDataUnsafe.hash
+            user: tgInstance.initDataUnsafe.user,
+            query_id: tgInstance.initDataUnsafe.query_id,
+            auth_date: tgInstance.initDataUnsafe.auth_date,
+            hash: tgInstance.initDataUnsafe.hash
         };
     }
 
     const jsonString = JSON.stringify(orderData);
 
     // Call switchInlineQuery if inside Telegram WebApp
-    if (tg && typeof tg.switchInlineQuery === 'function') {
+    if (tgInstance && typeof tgInstance.switchInlineQuery === 'function') {
         try {
-            tg.switchInlineQuery(jsonString);
+            tgInstance.switchInlineQuery(jsonString);
             showToast('已傳送指令至 Telegram！');
         } catch (error) {
             console.error('Telegram switchInlineQuery failed:', error);
-            fallbackCopyToClipboard(jsonString);
+            fallbackCopyToClipboard(jsonString, tgInstance);
         }
     } else {
         // Fallback for regular web browsers
-        fallbackCopyToClipboard(jsonString);
+        fallbackCopyToClipboard(jsonString, tgInstance);
     }
 }
 
 // Fallback to copy JSON data to clipboard when not running in Telegram WebApp
-function fallbackCopyToClipboard(text) {
+function fallbackCopyToClipboard(text, tgInstance) {
+    const isTelegram = tgInstance && tgInstance.platform !== 'unknown';
+    const msg = isTelegram 
+        ? '由於您的開啟管道限制（例如從主選單或 Inline 鍵盤開啟），無法直接傳送資料。\n系統已自動將「出貨單 JSON」複製至剪貼簿，您可以手動貼上發送給您的 Telegram Bot。'
+        : '目前非處於 Telegram 應用程式環境。\n系統已自動將「出貨單 JSON」複製至剪貼簿，您可以手動貼上發送給您的 Telegram Bot。';
+
     navigator.clipboard.writeText(text).then(() => {
-        alert('目前非處於 Telegram 應用程式環境。\n系統已自動將「出貨單 JSON」複製至剪貼簿，您可以手動貼上發送給您的 Telegram Bot。');
+        alert(msg);
     }).catch(err => {
         console.error('Could not copy JSON to clipboard: ', err);
         // Backup selection copy
@@ -552,7 +556,7 @@ function fallbackCopyToClipboard(text) {
         textarea.select();
         try {
             document.execCommand('copy');
-            alert('目前非處於 Telegram 應用程式環境。\n系統已自動將「出貨單 JSON」複製至剪貼簿，您可以手動貼上發送給您的 Telegram Bot。');
+            alert(msg);
         } catch (e) {
             console.error('execCommand copy failed', e);
             alert('複製失敗，請手動複製以下 JSON 資料：\n\n' + text);
