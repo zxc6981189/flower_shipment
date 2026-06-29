@@ -362,7 +362,7 @@ function updateStats() {
     });
 }
 
-// Copy Summary Text to Clipboard
+// Copy Shipping Order JSON to Clipboard
 function copySummaryToClipboard() {
     if (state.bundles.length === 0) {
         showToast('請先新增出貨資料！');
@@ -372,36 +372,39 @@ function copySummaryToClipboard() {
     let sizeCounts = { 'S': 0, 'M': 0, 'L': 0, '2L': 0 };
     let totalBoxes = 0;
 
-    let bundleDetails = state.bundles.map((bundle, index) => {
-        let itemsDesc = bundle.items.map(item => {
+    state.bundles.forEach(bundle => {
+        bundle.items.forEach(item => {
             const boxes = parseInt(item.boxes, 10) || 0;
             totalBoxes += boxes;
-            sizeCounts[item.size] = (sizeCounts[item.size] || 0) + boxes;
-            return `${item.size}: ${boxes}盒`;
-        }).join(', ');
-        return `第 ${index + 1} 捆: [${itemsDesc}]`;
-    }).join('\n');
+            if (sizeCounts.hasOwnProperty(item.size)) {
+                sizeCounts[item.size] += boxes;
+            }
+        });
+    });
 
-    let summaryText = `📋 【火鶴花出貨明細】\n`;
-    summaryText += `出貨日期：${state.date}\n`;
-    summaryText += `出貨廠商：${state.vendor}\n`;
-    summaryText += `總計捆數：${state.bundles.length} 捆\n`;
-    summaryText += `總計盒數：${totalBoxes} 盒\n\n`;
+    const orderData = {
+        vendor: state.vendor,
+        date: state.date,
+        total_bundles: state.bundles.length,
+        total_boxes: totalBoxes,
+        size_summary: sizeCounts,
+        bundles: state.bundles.map((bundle, index) => ({
+            bundle_index: index + 1,
+            items: bundle.items.map(item => ({
+                size: item.size,
+                boxes: item.boxes
+            }))
+        })),
+        submitted_at: new Date().toISOString()
+    };
 
-    summaryText += `【尺寸統計】\n`;
-    summaryText += `S  尺寸：${sizeCounts['S']} 盒\n`;
-    summaryText += `M  尺寸：${sizeCounts['M']} 盒\n`;
-    summaryText += `L  尺寸：${sizeCounts['L']} 盒\n`;
-    summaryText += `2L 尺寸：${sizeCounts['2L']} 盒\n\n`;
+    const jsonString = JSON.stringify(orderData, null, 2);
 
-    summaryText += `【每捆詳細明細】\n`;
-    summaryText += bundleDetails;
-
-    navigator.clipboard.writeText(summaryText).then(() => {
-        showToast('明細已複製到剪貼簿！');
+    navigator.clipboard.writeText(jsonString).then(() => {
+        showToast('出貨單 JSON 已複製到剪貼簿！');
     }).catch(err => {
-        console.error('Could not copy text: ', err);
-        showToast('複製失敗，請手動選取複製');
+        console.error('Could not copy JSON: ', err);
+        showToast('複製失敗，請手動複製');
     });
 }
 
