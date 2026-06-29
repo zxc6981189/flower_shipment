@@ -103,24 +103,16 @@ function setupGlobalEventListeners() {
         exportCSV();
     });
 
-    // Send to Telegram
-    const submitTgBtn = document.getElementById('submit-tg-btn');
-    if (submitTgBtn) {
-        submitTgBtn.addEventListener('click', () => {
-            sendToTelegram();
-        });
-    }
-
     // Reset All
     document.getElementById('reset-all-btn').addEventListener('click', () => {
         if (confirm('確定要清除所有出貨資料嗎？此動作無法復原。')) {
             localStorage.removeItem('anthurium_shipping_state');
             initDefaultState();
-            
+
             // Reset UI inputs
             document.getElementById('vendor-select').value = state.vendor;
             document.getElementById('shipping-date').value = state.date;
-            
+
             render();
             showToast('資料已重設');
         }
@@ -138,7 +130,7 @@ function addBundle() {
     state.bundles.push(newBundle);
     saveStateToStorage();
     render();
-    
+
     // Smooth scroll to the newly added bundle
     const newCard = document.getElementById(newBundle.id);
     if (newCard) {
@@ -203,7 +195,7 @@ function updateItemBoxes(bundleId, itemId, newBoxes) {
             let count = parseInt(newBoxes, 10);
             if (isNaN(count) || count < 1) count = 1;
             if (count > 21) count = 21;
-            
+
             item.boxes = count;
             saveStateToStorage();
             updateStats();
@@ -235,11 +227,11 @@ function render() {
         // Card Header
         const header = document.createElement('div');
         header.className = 'bundle-card-header';
-        
+
         const title = document.createElement('div');
         title.className = 'bundle-title';
         title.innerHTML = `📦 <span>第 ${index + 1} 捆</span>`;
-        
+
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'btn-text-danger';
         deleteBtn.innerHTML = '🗑️ 刪除此捆';
@@ -268,7 +260,7 @@ function render() {
             // Size Dropdown
             const sizeGroup = document.createElement('div');
             sizeGroup.className = 'form-group';
-            
+
             const sizeSelect = document.createElement('select');
             ['S', 'M', 'L', '2L'].forEach(size => {
                 const opt = document.createElement('option');
@@ -286,7 +278,7 @@ function render() {
             // Boxes Dropdown
             const boxesGroup = document.createElement('div');
             boxesGroup.className = 'form-group';
-            
+
             const boxesSelect = document.createElement('select');
             for (let i = 1; i <= 21; i++) {
                 const opt = document.createElement('option');
@@ -337,7 +329,7 @@ function render() {
 function updateStats() {
     let totalBundles = state.bundles.length;
     let totalBoxes = 0;
-    
+
     let sizeCounts = {
         'S': 0,
         'M': 0,
@@ -363,7 +355,7 @@ function updateStats() {
     ['S', 'M', 'L', '2L'].forEach(size => {
         const count = sizeCounts[size];
         document.getElementById(`val-${size}`).textContent = count;
-        
+
         // Progress bar width
         const percentage = totalBoxes > 0 ? (count / totalBoxes) * 100 : 0;
         document.getElementById(`bar-${size}`).style.width = `${percentage}%`;
@@ -395,13 +387,13 @@ function copySummaryToClipboard() {
     summaryText += `出貨廠商：${state.vendor}\n`;
     summaryText += `總計捆數：${state.bundles.length} 捆\n`;
     summaryText += `總計盒數：${totalBoxes} 盒\n\n`;
-    
+
     summaryText += `【尺寸統計】\n`;
     summaryText += `S  尺寸：${sizeCounts['S']} 盒\n`;
     summaryText += `M  尺寸：${sizeCounts['M']} 盒\n`;
     summaryText += `L  尺寸：${sizeCounts['L']} 盒\n`;
     summaryText += `2L 尺寸：${sizeCounts['2L']} 盒\n\n`;
-    
+
     summaryText += `【每捆詳細明細】\n`;
     summaryText += bundleDetails;
 
@@ -436,16 +428,16 @@ function exportCSV() {
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    
+
     const fileName = `火鶴花出貨單_${state.vendor}_${state.date}.csv`;
     link.setAttribute('href', url);
     link.setAttribute('download', fileName);
     link.style.visibility = 'hidden';
-    
+
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     showToast('CSV 檔案已下載');
 }
 
@@ -458,122 +450,4 @@ function showToast(message) {
     setTimeout(() => {
         toast.classList.add('hidden');
     }, 2500);
-}
-
-// Compile and send shipping order to Telegram Bot
-function sendToTelegram() {
-    if (state.bundles.length === 0) {
-        showToast('請先新增出貨資料！');
-        return;
-    }
-
-    // Calculate totals and statistics
-    let totalBoxes = 0;
-    let sizeCounts = { 'S': 0, 'M': 0, 'L': 0, '2L': 0 };
-    
-    state.bundles.forEach(bundle => {
-        bundle.items.forEach(item => {
-            const boxes = parseInt(item.boxes, 10) || 0;
-            totalBoxes += boxes;
-            if (sizeCounts.hasOwnProperty(item.size)) {
-                sizeCounts[item.size] += boxes;
-            }
-        });
-    });
-
-    // Structure JSON Payload
-    const orderData = {
-        vendor: state.vendor,
-        date: state.date,
-        total_bundles: state.bundles.length,
-        total_boxes: totalBoxes,
-        size_summary: sizeCounts,
-        bundles: state.bundles.map((bundle, index) => ({
-            bundle_index: index + 1,
-            id: bundle.id,
-            items: bundle.items.map(item => ({
-                size: item.size,
-                boxes: item.boxes
-            }))
-        })),
-        submitted_at: new Date().toISOString()
-    };
-
-    // Capture URL Query Parameters (e.g., chat_id or other variables from Telegram bot)
-    const urlParams = new URLSearchParams(window.location.search);
-    const queryParams = {};
-    for (const [key, value] of urlParams.entries()) {
-        queryParams[key] = value;
-    }
-    if (Object.keys(queryParams).length > 0) {
-        orderData.query_params = queryParams;
-    }
-
-    // Include Telegram WebApp context if available
-    const tgInstance = window.Telegram?.WebApp;
-    if (tgInstance && tgInstance.initDataUnsafe && Object.keys(tgInstance.initDataUnsafe).length > 0) {
-        orderData.telegram = {
-            user: tgInstance.initDataUnsafe.user,
-            query_id: tgInstance.initDataUnsafe.query_id,
-            auth_date: tgInstance.initDataUnsafe.auth_date,
-            hash: tgInstance.initDataUnsafe.hash
-        };
-    }
-
-    const jsonString = JSON.stringify(orderData);
-    
-    // Call switchInlineQuery if inside Telegram WebApp
-    if (tgInstance && typeof tgInstance.switchInlineQuery === 'function') {
-        try {
-            tgInstance.switchInlineQuery(jsonString);
-            showToast('已傳送指令至 Telegram！');
-        } catch (error) {
-            console.error('Telegram switchInlineQuery failed:', error);
-            fallbackCopyToClipboard(jsonString, tgInstance, error);
-        }
-    } else {
-        // Fallback for regular web browsers
-        fallbackCopyToClipboard(jsonString, tgInstance);
-    }
-}
-
-// Fallback to copy JSON data to clipboard when not running in Telegram WebApp
-function fallbackCopyToClipboard(text, tgInstance, error = null) {
-    const isTelegram = tgInstance && tgInstance.platform !== 'unknown';
-    let msg = isTelegram 
-        ? '由於您的開啟管道限制（例如從主選單或 Inline 鍵盤開啟），無法直接傳送資料。\n系統已自動將「出貨單 JSON」複製至剪貼簿，您可以手動貼上發送給您的 Telegram Bot。'
-        : '目前非處於 Telegram 應用程式環境。\n系統已自動將「出貨單 JSON」複製至剪貼簿，您可以手動貼上發送給您的 Telegram Bot。';
-
-    // 加上詳細的偵錯資訊
-    msg += '\n\n--- 偵錯資訊 (Debug Info) ---';
-    msg += `\n- window.Telegram: ${typeof window.Telegram !== 'undefined' ? '已載入' : '未載入'}`;
-    msg += `\n- WebApp 實例: ${tgInstance ? '已初始化' : '未初始化'}`;
-    if (tgInstance) {
-        msg += `\n- 平台 (Platform): ${tgInstance.platform || '未知'}`;
-        msg += `\n- initData 長度: ${tgInstance.initData ? tgInstance.initData.length : 0}`;
-        msg += `\n- switchInlineQuery: ${typeof tgInstance.switchInlineQuery === 'function' ? '存在' : '不存在'}`;
-    }
-    if (error) {
-        msg += `\n- 錯誤詳情: ${error.message || error}`;
-    }
-
-    navigator.clipboard.writeText(text).then(() => {
-        alert(msg);
-    }).catch(err => {
-        console.error('Could not copy JSON to clipboard: ', err);
-        // Backup selection copy
-        const textarea = document.createElement('textarea');
-        textarea.value = text;
-        textarea.style.position = 'fixed';
-        document.body.appendChild(textarea);
-        textarea.select();
-        try {
-            document.execCommand('copy');
-            alert(msg);
-        } catch (e) {
-            console.error('execCommand copy failed', e);
-            alert('複製失敗，請手動複製以下 JSON 資料：\n\n' + text);
-        }
-        document.body.removeChild(textarea);
-    });
 }

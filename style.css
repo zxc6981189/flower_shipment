@@ -301,17 +301,6 @@ select:focus, input[type="date"]:focus, input[type="number"]:focus {
     background-color: var(--primary-hover);
 }
 
-.btn-telegram {
-    background: linear-gradient(135deg, #24A1DE 0%, #1782b6 100%);
-    color: white;
-    border: none;
-    box-shadow: 0 4px 10px rgba(36, 161, 222, 0.2);
-}
-
-.btn-telegram:hover {
-    background: linear-gradient(135deg, #2ab6f6 0%, #24A1DE 100%);
-    box-shadow: 0 6px 14px rgba(36, 161, 222, 0.35);
-}
 
 .btn-large {
     padding: 14px 20px;
