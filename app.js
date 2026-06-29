@@ -522,17 +522,42 @@ function sendToTelegram() {
 
     const jsonString = JSON.stringify(orderData);
     
-    // Call switchInlineQuery if inside Telegram WebApp
-    if (tgInstance && typeof tgInstance.switchInlineQuery === 'function') {
+    let sent = false;
+
+    if (tgInstance) {
+        // 1. 優先嘗試使用 Telegram 官方推薦的 sendData 方法 (支援最大 17 KB，能無縫將 JSON 傳回 Bot)
+        // 注意：這需要您的 WebApp 是透過 Reply Keyboard Button (對話框底部的回覆鍵盤按鈕) 開啟
         try {
-            tgInstance.switchInlineQuery(jsonString);
-            showToast('已傳送指令至 Telegram！');
-        } catch (error) {
-            console.error('Telegram switchInlineQuery failed:', error);
-            fallbackCopyToClipboard(jsonString, tgInstance, error);
+            tgInstance.sendData(jsonString);
+            showToast('出貨單資料已傳送！');
+            sent = true;
+        } catch (sendDataError) {
+            console.log('tg.sendData is not available or failed:', sendDataError);
         }
-    } else {
-        // Fallback for regular web browsers
+
+        // 2. 如果 sendData 失敗 (例如是從 Inline Keyboard 或主選單開啟)，且 JSON 長度小於等於 256 字元，才使用 switchInlineQuery
+        if (!sent) {
+            if (typeof tgInstance.switchInlineQuery === 'function' && jsonString.length <= 256) {
+                try {
+                    tgInstance.switchInlineQuery(jsonString);
+                    showToast('已傳送指令至 Telegram！');
+                    sent = true;
+                } catch (inlineQueryError) {
+                    console.error('tg.switchInlineQuery failed:', inlineQueryError);
+                    fallbackCopyToClipboard(jsonString, tgInstance, inlineQueryError);
+                    sent = true;
+                }
+            } else if (jsonString.length > 256) {
+                // 如果 JSON 大於 256 字元，呼叫 switchInlineQuery 會必報 WebAppInlineQueryInvalid 錯誤，因此直接引導複製
+                const lengthError = new Error(`出貨單 JSON 長度為 ${jsonString.length} 字元，已超過 Telegram switchInlineQuery API 的 256 字元長度限制。`);
+                fallbackCopyToClipboard(jsonString, tgInstance, lengthError);
+                sent = true;
+            }
+        }
+    }
+
+    // 3. 一般網頁環境，使用剪貼簿複製作為退路
+    if (!sent) {
         fallbackCopyToClipboard(jsonString, tgInstance);
     }
 }
@@ -543,6 +568,14 @@ function fallbackCopyToClipboard(text, tgInstance, error = null) {
     let msg = isTelegram 
         ? '由於您的開啟管道限制（例如從主選單或 Inline 鍵盤開啟），無法直接傳送資料。\n系統已自動將「出貨單 JSON」複製至剪貼簿，您可以手動貼上發送給您的 Telegram Bot。'
         : '目前非處於 Telegram 應用程式環境。\n系統已自動將「出貨單 JSON」複製至剪貼簿，您可以手動貼上發送給您的 Telegram Bot。';
+
+    // 檢查是否為 Bot 尚未啟用 Inline Mode 的錯誤
+    if (error) {
+        const errorStr = error.message || error.toString();
+        if (errorStr.includes('InlineModeDisable') || errorStr.includes('InlineModeDisabled')) {
+            msg = '您的 Telegram Bot 尚未啟用「Inline Mode (行內內嵌模式)」，因此無法直接傳送出貨單。\n\n【解決步驟】：\n1. 請在 Telegram 中搜尋並私訊 @BotFather\n2. 輸入指令 /mybots 並選擇您的 Bot\n3. 點擊 [Bot Settings] -> [Inline Mode]\n4. 點擊 [Turn on] 啟用 Inline Mode\n\n系統已先將「出貨單 JSON」複製至剪貼簿，您可以手動貼上發送。';
+        }
+    }
 
     // 加上詳細的偵錯資訊
     msg += '\n\n--- 偵錯資訊 (Debug Info) ---';
