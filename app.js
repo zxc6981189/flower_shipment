@@ -13,8 +13,8 @@ document.addEventListener('DOMContentLoaded', () => {
         tgInstance.ready();
         tgInstance.expand?.(); // Expand WebApp to full height for better UI layout in Telegram
     }
-    initDefaultDate();
-    loadStateFromStorage();
+    loadStateFromStorage(); // Load stored state first
+    initDefaultDate();      // Initialize input values and events based on loaded state
     setupGlobalEventListeners();
     render();
 });
@@ -382,9 +382,15 @@ function copySummaryToClipboard() {
         });
     });
 
+    // Read current values directly from UI inputs to guarantee perfect timezone/state alignment
+    const dateInput = document.getElementById('shipping-date');
+    const vendorSelect = document.getElementById('vendor-select');
+    const currentDate = dateInput ? dateInput.value : state.date;
+    const currentVendor = vendorSelect ? vendorSelect.value : state.vendor;
+
     const orderData = {
-        vendor: state.vendor,
-        date: state.date,
+        vendor: currentVendor,
+        date: currentDate,
         total_bundles: state.bundles.length,
         total_boxes: totalBoxes,
         size_summary: sizeCounts,
@@ -415,10 +421,16 @@ function exportCSV() {
         return;
     }
 
+    // Read current values directly from UI inputs
+    const dateInput = document.getElementById('shipping-date');
+    const vendorSelect = document.getElementById('vendor-select');
+    const currentDate = dateInput ? dateInput.value : state.date;
+    const currentVendor = vendorSelect ? vendorSelect.value : state.vendor;
+
     // CSV Headers
     let csvContent = '\uFEFF'; // Add BOM for Excel Chinese character compatibility
-    csvContent += `出貨日期,${state.date}\n`;
-    csvContent += `出貨廠商,${state.vendor}\n\n`;
+    csvContent += `出貨日期,${currentDate}\n`;
+    csvContent += `出貨廠商,${currentVendor}\n\n`;
     csvContent += `捆序號,尺寸,盒數\n`;
 
     state.bundles.forEach((bundle, index) => {
@@ -432,7 +444,7 @@ function exportCSV() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
 
-    const fileName = `火鶴花出貨單_${state.vendor}_${state.date}.csv`;
+    const fileName = `火鶴花出貨單_${currentVendor}_${currentDate}.csv`;
     link.setAttribute('href', url);
     link.setAttribute('download', fileName);
     link.style.visibility = 'hidden';
