@@ -28,6 +28,26 @@ function getTodayDateString() {
     return `${yyyy}-${mm}-${dd}`;
 }
 
+// Helper: Get local ISO time string with local timezone offset (e.g. YYYY-MM-DDTHH:mm:ss+HH:MM)
+function getLocalISOString() {
+    const date = new Date();
+    const tzOffset = -date.getTimezoneOffset();
+    const diff = tzOffset >= 0 ? '+' : '-';
+    const pad = (num) => String(num).padStart(2, '0');
+    
+    const yyyy = date.getFullYear();
+    const MM = pad(date.getMonth() + 1);
+    const dd = pad(date.getDate());
+    const hh = pad(date.getHours());
+    const mm = pad(date.getMinutes());
+    const ss = pad(date.getSeconds());
+    
+    const offsetHours = pad(Math.floor(Math.abs(tzOffset) / 60));
+    const offsetMinutes = pad(Math.abs(tzOffset) % 60);
+    
+    return `${yyyy}-${MM}-${dd}T${hh}:${mm}:${ss}${diff}${offsetHours}:${offsetMinutes}`;
+}
+
 function initDefaultDate() {
     const dateInput = document.getElementById('shipping-date');
     if (dateInput) {
@@ -55,8 +75,8 @@ function loadStateFromStorage() {
     if (stored) {
         try {
             state = JSON.parse(stored);
-            // Ensure date is updated if loaded empty or older date, or keep stored
-            if (!state.date) state.date = getTodayDateString();
+            // Always default to today's date when filling a new or loaded form
+            state.date = getTodayDateString();
         } catch (e) {
             console.error('Error parsing stored state:', e);
             initDefaultState();
@@ -401,7 +421,7 @@ function copySummaryToClipboard() {
                 boxes: item.boxes
             }))
         })),
-        submitted_at: new Date().toISOString()
+        submitted_at: getLocalISOString()
     };
 
     const jsonString = JSON.stringify(orderData, null, 2);
