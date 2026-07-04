@@ -1,6 +1,6 @@
 // Application State
 let state = {
-    vendor: '商榮',
+    vendor: '紅炬',
     date: getTodayDateString(),
     bundles: []
 };
@@ -88,7 +88,7 @@ function loadStateFromStorage() {
 
 function initDefaultState() {
     state = {
-        vendor: '商榮',
+        vendor: '紅炬',
         date: getTodayDateString(),
         bundles: [
             {
@@ -122,6 +122,41 @@ function setupGlobalEventListeners() {
     document.getElementById('export-csv-btn').addEventListener('click', () => {
         exportCSV();
     });
+
+    // Preview HTML Layout
+    const previewBtn = document.getElementById('preview-html-btn');
+    if (previewBtn) {
+        previewBtn.addEventListener('click', () => {
+            showHTMLPreview();
+        });
+    }
+
+    // Modal closing events
+    const closePreviewBtn = document.getElementById('close-preview-btn');
+    if (closePreviewBtn) {
+        closePreviewBtn.addEventListener('click', () => {
+            closeHTMLPreview();
+        });
+    }
+
+    const modalCloseBtn = document.getElementById('modal-close-btn');
+    if (modalCloseBtn) {
+        modalCloseBtn.addEventListener('click', () => {
+            closeHTMLPreview();
+        });
+    }
+
+
+
+    // Close modal on clicking outside the modal content
+    const previewModal = document.getElementById('preview-modal');
+    if (previewModal) {
+        previewModal.addEventListener('click', (e) => {
+            if (e.target === previewModal) {
+                closeHTMLPreview();
+            }
+        });
+    }
 
     // Reset All
     document.getElementById('reset-all-btn').addEventListener('click', () => {
@@ -485,4 +520,86 @@ function showToast(message) {
     setTimeout(() => {
         toast.classList.add('hidden');
     }, 2500);
+}
+
+// Render and open the HTML Preview modal
+function showHTMLPreview() {
+    if (state.bundles.length === 0) {
+        showToast('請先新增出貨資料！');
+        return;
+    }
+
+    let sizeCounts = { 'S': 0, 'M': 0, 'L': 0, '2L': 0 };
+    let totalBoxes = 0;
+
+    state.bundles.forEach(bundle => {
+        bundle.items.forEach(item => {
+            const boxes = parseInt(item.boxes, 10) || 0;
+            totalBoxes += boxes;
+            if (sizeCounts.hasOwnProperty(item.size)) {
+                sizeCounts[item.size] += boxes;
+            }
+        });
+    });
+
+    const dateInput = document.getElementById('shipping-date');
+    const vendorSelect = document.getElementById('vendor-select');
+    const currentDate = dateInput ? dateInput.value : state.date;
+    const currentVendor = vendorSelect ? vendorSelect.value : state.vendor;
+
+    // Generate meta info section (excluding shipping vendor as requested)
+    let html = `
+        <div class="preview-info-card">
+            <div class="preview-info-row">
+                <span class="preview-info-label">出貨日期</span>
+                <span class="preview-info-value">${currentDate}</span>
+            </div>
+            <div class="preview-info-row">
+                <span class="preview-info-label">總計捆數</span>
+                <span class="preview-info-value">${state.bundles.length} 捆</span>
+            </div>
+            <div class="preview-info-row">
+                <span class="preview-info-label">總計盒數</span>
+                <span class="preview-info-value">${totalBoxes} 盒</span>
+            </div>
+        </div>
+    `;
+
+    // Generate per-bundle cards with dot leaders (e.g. S .... 10盒)
+    let bundleCards = state.bundles.map((bundle, index) => {
+        let itemsHtml = bundle.items.map(item => `
+            <div class="preview-item-row">
+                <span class="preview-item-size">${item.size}</span>
+                <span class="preview-item-dots"></span>
+                <span class="preview-item-val">${item.boxes} 盒</span>
+            </div>
+        `).join('');
+        
+        return `
+            <div class="preview-bundle-card">
+                <div class="preview-bundle-header">
+                    📦 第 ${index + 1} 捆
+                </div>
+                <div class="preview-bundle-body">
+                    ${itemsHtml}
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    html += `
+        <h3 class="preview-section-title">每捆詳細明細</h3>
+        <div class="preview-bundle-list">
+            ${bundleCards}
+        </div>
+    `;
+
+    // Inject and show
+    document.getElementById('preview-modal-body').innerHTML = html;
+    document.getElementById('preview-modal').classList.remove('hidden');
+}
+
+// Close the HTML Preview modal
+function closeHTMLPreview() {
+    document.getElementById('preview-modal').classList.add('hidden');
 }
